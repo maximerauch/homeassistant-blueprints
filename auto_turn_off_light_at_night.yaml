@@ -42,11 +42,9 @@ blueprint:
 
 triggers:
   trigger: time
-  description: Turn off the light at the start time
   at: !input start_time
 
   trigger: state
-  description: Turn off within the active time window after the wait time
   entity_id: !input light_target
   to: "on"
   for:
