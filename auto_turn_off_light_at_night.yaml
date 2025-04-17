@@ -2,7 +2,7 @@ blueprint:
   name: Automaticaly turn off light at night after delay
   description: Turn off a light at night after delay
   domain: automation
-  source_url: https://github.com/maximerauch/home-assistant-blueprints/blob/main/auto_turn_off_light_at_night.yaml
+  source_url: https://github.com/maximerauch/homeassistant-blueprints/blob/main/auto_turn_off_light_at_night.yaml
   author: Maxime RAUCH
 
   input:
