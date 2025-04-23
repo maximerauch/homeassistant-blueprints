@@ -4,7 +4,7 @@ blueprint:
     Updates a counter entity based on how many selected numeric sensors have a
     state below a defined threshold. Can optionally trigger a notification.
   domain: automation
-  source_url: https://github.com/maximerauch/homeassistant-blueprints/blob/main/low_level_detector.yaml
+  source_url: https://github.com/maximerauch/homeassistant-blueprints/blob/main/low_level_detector_counter.yaml
   author: Maxime RAUCH
   input:
     frequency_time:
