@@ -1,0 +1,121 @@
+blueprint:
+  name: Low Level Detector Counter
+  description: >
+    Updates a counter entity based on how many selected numeric sensors have a
+    state below a defined threshold. Can optionally trigger a notification.
+  domain: automation
+  source_url: https://github.com/maximerauch/homeassistant-blueprints/blob/main/low_level_detector.yaml
+  author: Maxime RAUCH
+  input:
+    frequency_time:
+      name: Frequency
+      description: Choose how often the automation should run (hh:mm:ss)
+      default: "12:00:00"
+      selector:
+        time: {}
+    monitored_entities:
+      name: Monitored Entities
+      description: List of numeric sensor entities to monitor (e.g., battery,
+        temperature, signal, etc.).
+      selector:
+        entity:
+          multiple: true
+          domain: sensor
+    low_level_threshold:
+      name: Threshold
+      description: Trigger if the entity value is below this threshold.
+      default: 20
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: ""
+          mode: slider
+    counter_target:
+      name: Counter Entity
+      description: The counter to update with the number of entities below the threshold.
+      selector:
+        entity:
+          domain: counter
+    is_notification_enabled:
+      name: Enable Notification
+      description: Enable notification when count is below the specified limit.
+      default: false
+      selector:
+        boolean: {}
+    notification_services:
+      name: Devices Notified
+      description: Select the devices to be notified.
+      selector:
+        device:
+          filter:
+          - integration: mobile_app
+          multiple: true
+    notification_title:
+      name: Notification Title
+      default: Low Level Alert
+      selector:
+        text: {}
+    notification_message:
+      name: Notification Message
+      default: Some monitored entities have low values!
+      selector:
+        text: {}
+variables:
+  _frequency_time: !input frequency_time
+  _monitored_entities: !input monitored_entities
+  _low_level_threshold: !input low_level_threshold
+  _is_notification_enabled: !input is_notification_enabled
+trigger:
+  - platform: time_pattern
+    minutes: "*"
+action:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: >
+          {% set frequency = strptime(_frequency_time, "%H:%M:%S") %}
+          {% set frequency_seconds = frequency.hour * 3600 + frequency.minute * 60 + frequency.second %}
+          {% set now_time = now() %}
+          {% set now_seconds = now_time.hour * 3600 + now_time.minute * 60 + now_time.second %}
+          {{ frequency_seconds > 0 and now_seconds % frequency_seconds == 0 }}
+      sequence:
+        - service: counter.set_value
+          entity_id: !input counter_target
+          data:
+            value: |
+              {{
+                _monitored_entities
+                | map('states')
+                | selectattr('isnumeric')
+                | map('int')
+                | select('lt', _low_level_threshold)
+                | list
+                | count
+              }}
+
+        - choose:
+            - alias: Check if notification is enabled
+              conditions:
+                - condition: template
+                  value_template: >
+                    {{
+                      _is_notification_enabled and
+                      (_monitored_entities
+                        | map('states')
+                        | selectattr('isnumeric')
+                        | map('int')
+                        | select('lt', _low_level_threshold)
+                        | list
+                        | count) > 1
+                    }}
+              sequence:
+                - alias: Send a notification to each device
+                  repeat:
+                    for_each: !input notification_services
+                    sequence:
+                      - action: notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                        data:
+                          title: !input notification_title
+                          message: !input notification_message
+mode: single
